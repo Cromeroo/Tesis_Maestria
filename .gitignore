@@ -206,5 +206,6 @@ Documentos
 
 credentials.json
 
+best_model_3class.pth
 
 # End of https://www.toptal.com/developers/gitignore/api/python,windows
