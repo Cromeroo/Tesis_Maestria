@@ -209,3 +209,15 @@ credentials.json
 best_model_3class.pth
 
 # End of https://www.toptal.com/developers/gitignore/api/python,windows
+# Archivos temporales y de prueba
+test_*.py
+prueba_*.py
+demo_*.py
+debug_*.py
+*_test.py
+*_prueba.py
+# Cache Python
+*.pyc
+*.pyo
+# Archivos de sistema
+.DS_Store

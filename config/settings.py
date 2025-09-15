@@ -15,13 +15,14 @@ class Settings:
     TRANSLATIONS_DIR = DOCUMENTS_DIR / "textos_traducidos"
     CHROMA_DB_DIR = BASE_DIR / "chroma_db"
     
-    # Configuración de Google Cloud
+    # Configuración de Google Cloud / Vertex AI
     GOOGLE_CREDENTIALS_PATH = r"C:\Users\danil\OneDrive\Escritorio\Tesis\credentials.json"
+    GOOGLE_PROJECT_ID = "stately-moon-451804-a9"
     GOOGLE_LOCATION = "us-central1"
     
-    # Configuración del modelo LLM
+    # Configuración del modelo LLM (usando Vertex AI)
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_API_KEY_HERE')
-    LLM_MODEL_NAME = "gemini-2.0-flash-exp"
+    LLM_MODEL_NAME = "gemini-2.5-flash"  # ← Modelo corregido que funciona
     LLM_TEMPERATURE = 0.1
     LLM_MAX_OUTPUT_TOKENS = 8192
     LLM_MAX_RETRIES = 3

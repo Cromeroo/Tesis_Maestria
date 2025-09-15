@@ -34,16 +34,38 @@ class VectorStore:
             raise
     
     def _initialize_embedding_function(self):
-        """Inicializa la función de embeddings"""
-        try:
-            embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=AppSettings.EMBEDDING_MODEL
-            )
-            print(f"🔍 Función de embeddings inicializada: {AppSettings.EMBEDDING_MODEL}")
-            return embedding_function
-        except Exception as e:
-            print(f"❌ Error al inicializar embeddings: {e}")
-            raise
+        """Inicializa la función de embeddings con manejo robusto de errores"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Limpiar cache si hay problemas
+                if attempt > 0:
+                    import torch
+                    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                    
+                embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=AppSettings.EMBEDDING_MODEL,
+                    device="cpu"  # Forzar CPU para evitar problemas de GPU
+                )
+                print(f"🔍 Función de embeddings inicializada: {AppSettings.EMBEDDING_MODEL}")
+                return embedding_function
+                
+            except Exception as e:
+                print(f"⚠️ Intento {attempt + 1} falló: {e}")
+                if attempt == max_retries - 1:
+                    # Último intento con modelo alternativo
+                    try:
+                        print("🔄 Intentando con modelo de embeddings alternativo...")
+                        embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+                            model_name="all-MiniLM-L6-v2",  # Modelo más ligero
+                            device="cpu"
+                        )
+                        print("✅ Modelo alternativo inicializado correctamente")
+                        return embedding_function
+                    except Exception as e2:
+                        print(f"❌ Error crítico con embeddings: {e2}")
+                        raise e2
+                time.sleep(1)  # Esperar antes del siguiente intento
     
     def create_collection(self, collection_name: str, description: str = None) -> chromadb.Collection:
         """
@@ -77,6 +99,31 @@ class VectorStore:
         except Exception as e:
             print(f"❌ Error al crear colección '{collection_name}': {e}")
             raise
+    
+    def get_or_create_collection(self, collection_name: str, description: str = None) -> chromadb.Collection:
+        """
+        Obtiene una colección existente o la crea si no existe
+        
+        Args:
+            collection_name: Nombre de la colección
+            description: Descripción de la colección
+            
+        Returns:
+            Colección obtenida o creada
+        """
+        try:
+            # Intentar obtener colección existente
+            collection = self.client.get_collection(
+                name=collection_name,
+                embedding_function=self.embedding_function
+            )
+            print(f"✅ Colección '{collection_name}' obtenida (existente)")
+            return collection
+            
+        except Exception:
+            # Si no existe, crearla
+            print(f"🔄 Colección '{collection_name}' no existe, creándola...")
+            return self.create_collection(collection_name, description)
     
     def get_collection(self, collection_name: str) -> chromadb.Collection:
         """
