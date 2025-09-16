@@ -13,13 +13,29 @@ sys.path.append(str(Path(__file__).parent))
 def setup_system():
     """Configurar sistema una sola vez"""
     try:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\danil\OneDrive\Escritorio\Tesis\credentials.json"
+        # Configurar credenciales
+        credentials_path = r"C:\Users\danil\OneDrive\Escritorio\Tesis\credentials.json"
+        if not os.path.exists(credentials_path):
+            raise FileNotFoundError(f"Archivo de credenciales no encontrado: {credentials_path}")
         
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+        
+        # Configurar ChromaDB
         import chromadb
         chroma_path = "C:/Users/danil/OneDrive/Escritorio/Tesis/chroma_db"
-        client = chromadb.PersistentClient(path=chroma_path)
-        collection = client.list_collections()[0]
+        if not os.path.exists(chroma_path):
+            raise FileNotFoundError(f"Base de datos ChromaDB no encontrada: {chroma_path}")
         
+        client = chromadb.PersistentClient(path=chroma_path)
+        collections = client.list_collections()
+        
+        if not collections:
+            raise Exception("No hay colecciones en ChromaDB. Ejecuta primero el procesamiento de documentos.")
+        
+        collection = collections[0]
+        print(f"✅ ChromaDB cargado: {collection.name} con {collection.count()} documentos")
+        
+        # Configurar VertexAI
         import vertexai
         from langchain_google_vertexai import VertexAI
         
@@ -27,14 +43,18 @@ def setup_system():
         llm = VertexAI(
             model_name="gemini-2.5-flash",
             temperature=0.3,  # Más directo y consistente
-            max_output_tokens=800,  # Ajustado para completar respuestas de 200-300 palabras
+            max_output_tokens=2500,  # Aumentado para respuestas completas
             top_p=0.9,
             top_k=40
         )
         
+        print("✅ VertexAI configurado")
         return collection, llm
+        
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error en setup_system: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None
 
 def detectar_contexto(pregunta):
@@ -91,14 +111,16 @@ PRINCIPIOS:
 3. COMPLEMENTA con 2-3 recomendaciones adicionales clave
 4. USA lenguaje sencillo, sin jerga técnica excesiva
 5. SÉ CONCISO pero completo en información esencial
+6. SIEMPRE completa tu respuesta, no la cortes a la mitad
 
 ESTRUCTURA DE RESPUESTA:
 1. Confirmación del problema (1-2 líneas)
 2. Solución directa a lo que pregunta (productos, dosis, cómo aplicar)
 3. 2-3 medidas complementarias importantes
 4. Una advertencia de seguridad si aplica
+5. CIERRE: Termina siempre con una frase de cierre completa
 
-LONGITUD: Máximo 200 palabras para respuestas básicas, 300 para casos complejos.
+LONGITUD: Entre 200-400 palabras para respuestas completas. IMPORTANTE: Asegúrate de completar todas las ideas.
 
 TONO: Como un agrónomo experimentado hablando con un productor - profesional pero cercano, directo pero servicial.
 
@@ -107,11 +129,14 @@ EVITAR:
 - Emojis (máximo 2-3 en toda la respuesta)
 - Términos muy técnicos sin explicación
 - Opciones múltiples cuando el usuario ya eligió una ruta
+- Cortar la respuesta a la mitad
 
 CONTEXTO TÉCNICO DISPONIBLE SOBRE TIZÓN TARDÍO:
-{context[:800]}
+{context[:1000]}
 
 PREGUNTA DEL USUARIO: {pregunta}
+
+INSTRUCCIÓN ESPECIAL: Completa toda la información solicitada y asegúrate de que tu respuesta termine con una frase completa y útil.
 
 RESPUESTA COMO AGRÓNOMO ESPECIALISTA EN TOMATE:
 """

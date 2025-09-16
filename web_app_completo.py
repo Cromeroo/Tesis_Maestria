@@ -224,22 +224,23 @@ def load_systems():
         with st.spinner("🔧 Cargando sistemas de IA..."):
             try:
                 # Cargar clasificador CNN
-                st.write("📥 Cargando modelo CNN...")
                 st.session_state.classifier = TomatoImageClassifier()
-                st.write("✅ CNN cargado")
+                st.write("✅ Clasificador CNN cargado")
                 
                 # Cargar sistema RAG
-                st.write("📚 Inicializando sistema RAG...")
                 collection, llm = setup_system()
+                if collection is None or llm is None:
+                    raise Exception("No se pudo inicializar el sistema RAG. Verifica ChromaDB y las credenciales de Google.")
+                
                 st.session_state.rag_system = (collection, llm)
-                st.write("✅ RAG inicializado")
+                st.write("✅ Sistema RAG cargado")
                 
                 st.session_state.system_ready = True
-                st.success("✅ Todos los sistemas cargados correctamente")
-                
+                st.success("✅ Sistemas cargados correctamente")
             except Exception as e:
                 st.error(f"❌ Error cargando sistemas: {e}")
-                st.error(f"Detalle del error: {str(e)}")
+                st.write("Detalle del error:", str(e))
+                # Mostrar información de diagnóstico
                 import traceback
                 st.code(traceback.format_exc())
 
@@ -247,7 +248,6 @@ def classify_image(image):
     """Clasificar imagen usando CNN"""
     try:
         result = st.session_state.classifier.classify_image(image)
-        
         if "error" in result:
             st.error(f"Error en clasificación: {result['error']}")
             return None, None, None
@@ -261,16 +261,38 @@ def classify_image(image):
         st.error(f"Error en clasificación: {e}")
         return None, None, None
 
-def get_rag_response(query, classification):
-    """Obtener respuesta del sistema RAG"""
+def get_rag_response(query, classification, chat_history=None):
+    """Obtener respuesta del sistema RAG con memoria conversacional"""
     try:
         collection, llm = st.session_state.rag_system
         if collection and llm:
-            # Adaptar query según clasificación
-            if classification == "Tizon_tardio":
-                enhanced_query = f"tizón tardío Phytophthora infestans tomate {query}"
+            # Verificar si hay una imagen analizada recientemente
+            image_context = ""
+            if "temp_image_display" in st.session_state:
+                img_pred = st.session_state.temp_image_display['prediction']
+                img_conf = st.session_state.temp_image_display['confidence']
+                image_context = f"\n\nCONTEXTO DE IMAGEN RECIENTE: Se analizó una imagen con resultado '{img_pred}' (confianza: {img_conf:.1f}%). "
+            
+            # Construir contexto conversacional
+            conversation_context = ""
+            if chat_history:
+                # Tomar las últimas 6 interacciones (3 pares pregunta-respuesta)
+                recent_history = chat_history[-6:] if len(chat_history) > 6 else chat_history
+                conversation_pairs = []
+                for i in range(0, len(recent_history)-1, 2):
+                    if i+1 < len(recent_history):
+                        user_msg = recent_history[i].get("content", "")
+                        assistant_msg = recent_history[i+1].get("content", "")
+                        conversation_pairs.append(f"Usuario: {user_msg}\nAsistente: {assistant_msg}")
+                
+                if conversation_pairs:
+                    conversation_context = f"\n\nContexto de conversación previa:\n" + "\n---\n".join(conversation_pairs[-2:])  # Últimas 2 interacciones
+            
+            # Adaptar query según clasificación o imagen analizada
+            if classification == "Tizon_tardio" or (image_context and "Tizon_tardio" in image_context):
+                enhanced_query = f"tizón tardío Phytophthora infestans tomate {query}{image_context}{conversation_context}"
             else:
-                enhanced_query = query
+                enhanced_query = f"{query}{image_context}{conversation_context}"
                 
             response, context = generar_respuesta_completa(enhanced_query, collection, llm)
             return response
@@ -278,21 +300,37 @@ def get_rag_response(query, classification):
     except Exception as e:
         return f"Error en RAG: {e}"
 
-def render_chat_message(role, content, image=None, classification=None):
+def render_chat_message(role, content, image=None, classification=None, image_id=None):
     """Renderizar mensaje de chat"""
     if role == "user":
-        if image:
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.image(image, caption="Imagen enviada", use_container_width=True)
-            with col2:
+        if image and image_id:
+            # Para imágenes, solo mostrar una referencia textual después de la primera vez
+            if "image_analysis_shown" not in st.session_state:
+                st.session_state.image_analysis_shown = set()
+            
+            if image_id not in st.session_state.image_analysis_shown:
+                # Primera vez que aparece esta imagen en el chat
+                st.session_state.image_analysis_shown.add(image_id)
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.image(image, caption="📸 Imagen para análisis", use_container_width=True)
+                with col2:
+                    st.markdown(f"""
+                    <div class="user-message fade-in">
+                        <strong>🧑‍🌾 Tú:</strong><br>
+                        {content}
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                # Referencias posteriores a la misma imagen - solo texto
                 st.markdown(f"""
                 <div class="user-message fade-in">
                     <strong>🧑‍🌾 Tú:</strong><br>
-                    {content}
+                    � {content}
                 </div>
                 """, unsafe_allow_html=True)
         else:
+            # Mensaje de texto normal
             st.markdown(f"""
             <div class="user-message fade-in">
                 <strong>🧑‍🌾 Tú:</strong><br>
@@ -359,6 +397,9 @@ def sidebar_controls():
         # Limpiar chat
         if st.button("🗑️ Limpiar Chat", use_container_width=True):
             st.session_state.chat_history = []
+            # Limpiar imagen temporal
+            if "temp_image_display" in st.session_state:
+                del st.session_state["temp_image_display"]
             st.rerun()
         
         # Información adicional
@@ -376,85 +417,27 @@ def sidebar_controls():
 def handle_image_upload(uploaded_file):
     """Manejar subida de imagen"""
     if uploaded_file and st.session_state.system_ready:
-        try:
-            # Mostrar imagen
-            image = Image.open(uploaded_file)
-            st.write(f"📷 Imagen cargada: {image.size} píxeles")
+        # Mostrar imagen inmediatamente (fuera del historial)
+        image = Image.open(uploaded_file)
+        
+        with st.spinner("🔍 Analizando imagen..."):
+            # Clasificar imagen
+            prediction, confidence, probabilities = classify_image(image)
             
-            with st.spinner("🔍 Analizando imagen..."):
-                # Clasificar imagen
-                prediction, confidence, probabilities = classify_image(image)
+            if prediction:
+                # Guardar imagen y resultados para mostrar temporalmente
+                st.session_state.temp_image_display = {
+                    "image": image,
+                    "prediction": prediction,
+                    "confidence": confidence
+                }
                 
-                if prediction:
-                    st.write(f"🎯 Clasificación: {prediction} (Confianza: {confidence:.1f}%)")
-                    
-                    # Agregar a historial
-                    user_message = "He subido una imagen de mi planta de tomate para diagnóstico."
-                    st.session_state.chat_history.append({
-                        "role": "user",
-                        "content": user_message,
-                        "image": image,
-                        "timestamp": time.time()
-                    })
-                    
-                    # Generar respuesta según clasificación
-                    if prediction == "Tizon_tardio":
-                        rag_query = "diagnóstico tizón tardío tratamiento recomendaciones manejo"
-                        rag_response = get_rag_response(rag_query, prediction)
-                        
-                        response = f"""**Diagnóstico Visual Confirmado: TIZÓN TARDÍO**
-
-Confianza: {confidence:.1f}%
-
-{rag_response}
-
-**⚠️ Recomendación:** Este es un caso confirmado de tizón tardío. Las medidas deben aplicarse inmediatamente para evitar propagación."""
-                    
-                    elif prediction == "Sana":
-                        response = f"""**¡Excelente! Tu planta se ve SANA**
-
-Confianza: {confidence:.1f}%
-
-🌱 **Estado actual:** La planta muestra signos saludables sin evidencia de tizón tardío.
-
-🛡️ **Mantén la prevención:**
-- Continúa con riego en la base, evitando mojar follaje
-- Asegura buena ventilación entre plantas
-- Aplica fungicidas preventivos cada 7-10 días
-- Monitorea diariamente, especialmente después de lluvia
-
-💡 **Tip:** Una planta sana es la mejor defensa contra enfermedades."""
-                    
-                    else:  # Otras enfermedades
-                        rag_query = "enfermedades tomate diagnóstico tratamiento control"
-                        rag_response = get_rag_response(rag_query, prediction)
-                        
-                        response = f"""**Detectada: OTRA ENFERMEDAD (No Tizón Tardío)**
-
-Confianza: {confidence:.1f}%
-
-{rag_response}
-
-**💡 Sugerencia:** Para un diagnóstico más específico, comparte más detalles sobre los síntomas visibles."""
-                    
-                    # Agregar respuesta al historial
-                    st.session_state.chat_history.append({
-                        "role": "assistant",
-                        "content": response,
-                        "classification": prediction,
-                        "confidence": confidence,
-                        "timestamp": time.time()
-                    })
-                    
-                    return True
-                else:
-                    st.error("❌ No se pudo clasificar la imagen")
-                    
-        except Exception as e:
-            st.error(f"❌ Error procesando imagen: {e}")
-            import traceback
-            st.code(traceback.format_exc())
-            
+                # NO agregar nada al historial automáticamente
+                # El usuario puede hacer preguntas después si quiere
+                
+                return True
+            else:
+                st.error("❌ No se pudo procesar la imagen. Intenta con otra imagen.")
     return False
 
 def main():
@@ -482,6 +465,37 @@ def main():
     # Área principal de chat
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     
+    # Contenedor para mostrar temporalmente las imágenes subidas
+    if "temp_image_display" in st.session_state:
+        with st.container():
+            st.markdown("### 📸 Resultado del Análisis")
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col1:
+                st.image(st.session_state.temp_image_display["image"], 
+                        caption="Imagen analizada", use_container_width=True)
+            with col2:
+                pred = st.session_state.temp_image_display['prediction']
+                conf = st.session_state.temp_image_display['confidence']
+                
+                if pred == "Tizon_tardio":
+                    st.error(f"🍄 **TIZÓN TARDÍO DETECTADO**")
+                    st.warning(f"⚠️ Confianza: {conf:.1f}%")
+                    st.info("💬 **Haz preguntas** sobre tratamientos, prevención o manejo")
+                elif pred == "Sana":
+                    st.success(f"🌱 **PLANTA SANA**")
+                    st.info(f"✅ Confianza: {conf:.1f}%")
+                    st.info("💬 **Haz preguntas** sobre cuidados preventivos")
+                else:
+                    st.warning(f"⚠️ **OTRA ENFERMEDAD**")
+                    st.info(f"🔍 Confianza: {conf:.1f}%")
+                    st.info("💬 **Haz preguntas** para más detalles")
+                
+            with col3:
+                if st.button("❌ Ocultar", key="hide_temp_image"):
+                    del st.session_state.temp_image_display
+                    st.rerun()
+        st.markdown("---")
+    
     # Mostrar historial de chat
     if st.session_state.chat_history:
         for message in st.session_state.chat_history:
@@ -489,7 +503,8 @@ def main():
                 message["role"],
                 message["content"],
                 message.get("image"),
-                message.get("classification")
+                message.get("classification"),
+                message.get("image_id")
             )
     else:
         # Mensaje de bienvenida
@@ -508,36 +523,38 @@ def main():
     
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Input de texto
+    # Input de texto con form para evitar loops
     with st.container():
         st.markdown('<div class="input-container">', unsafe_allow_html=True)
         
-        col1, col2 = st.columns([4, 1])
-        
-        with col1:
-            user_input = st.text_input(
-                "💬 Escribe tu pregunta...",
-                placeholder="Ej: ¿Cómo puedo prevenir el tizón tardío? o ¿Qué fungicida recomiendas?",
-                label_visibility="collapsed"
-            )
-        
-        with col2:
-            send_button = st.button("📤 Enviar", use_container_width=True)
+        with st.form(key="chat_form", clear_on_submit=True):
+            col1, col2 = st.columns([4, 1])
+            
+            with col1:
+                user_input = st.text_input(
+                    "💬 Escribe tu pregunta...",
+                    placeholder="Ej: ¿Cómo puedo prevenir el tizón tardío? o ¿Qué fungicida recomiendas?",
+                    label_visibility="collapsed",
+                    key="user_input"
+                )
+            
+            with col2:
+                send_button = st.form_submit_button("📤 Enviar", use_container_width=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Procesar input de texto
-    if (send_button or user_input) and user_input.strip() and st.session_state.system_ready:
+    if send_button and user_input and user_input.strip() and st.session_state.system_ready:
         # Agregar mensaje del usuario
         st.session_state.chat_history.append({
             "role": "user",
-            "content": user_input,
+            "content": user_input.strip(),
             "timestamp": time.time()
         })
         
         # Generar respuesta RAG
         with st.spinner("🤔 Consultando base de conocimiento..."):
-            response = get_rag_response(user_input, None)
+            response = get_rag_response(user_input.strip(), None, st.session_state.chat_history)
         
         # Agregar respuesta del asistente
         st.session_state.chat_history.append({
