@@ -30,11 +30,12 @@ except Exception as e:
 sys.path.append(str(Path(__file__).parent))
 
 # Importar componentes
-from components.image_classifier import TomatoImageClassifier
+from components.analysis.image_analyzer import ImageAnalyzer as TomatoImageClassifier
 try:
     from sistema_langgraph_demo import SistemaRAGLangGraph
 except ImportError:
-    from sistema_rag_simple import SistemaRAGSimple as SistemaRAGLangGraph
+    print("❌ Error: No se pudo importar SistemaRAGLangGraph")
+    SistemaRAGLangGraph = None
 
 def configure_page():
     """Configurar la página con estilo moderno"""
@@ -543,7 +544,7 @@ def classify_image(image):
             st.error(f"Error en clasificación: {result['error']}")
             return None, None, None
         
-        prediction = result["class_name"]
+        prediction = result["predicted_class"]
         confidence = result["confidence"] * 100
         probabilities = result["probabilities"]
         
@@ -794,7 +795,7 @@ def calculate_severity_score(cnn_confidence, consensus_data=None, user_query="",
     # 4. Progresión temporal si hay historial (+10 puntos)
     if conversation_history and st.session_state.conversation_memory['user_profile']['last_diagnosis']:
         last_diag = st.session_state.conversation_memory['user_profile']['last_diagnosis']
-        if last_diag.get('disease') in ['Tizon_tardio', 'Tizón tardío']:
+        if last_diag.get('disease') == 'Tizon_tardio':
             base_score += 10
             score_details.append("Caso en seguimiento (+10)")
     

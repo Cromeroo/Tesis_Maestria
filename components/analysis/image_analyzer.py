@@ -141,18 +141,18 @@ class ImageAnalyzer:
                                std=[0.229, 0.224, 0.225])
         ])
         
-        # Mapeo de clases
+        # Mapeo de clases - EXACTAMENTE como en el modelo CNN
         self.class_names = {
-            0: "Saludable",
-            1: "Tizón Temprano", 
-            2: "Tizón Tardío"
+            0: "Sana",
+            1: "Tizon_tardio", 
+            2: "Otras_enfermedades"
         }
         
         # Niveles de severidad
         self.severity_levels = {
-            "Saludable": "Ninguna",
-            "Tizón Temprano": "Moderada",
-            "Tizón Tardío": "Alta"
+            "Sana": "Ninguna",
+            "Tizon_tardio": "Alta",
+            "Otras_enfermedades": "Moderada"
         }
     
     def _load_huggingface_token(self):
@@ -333,7 +333,7 @@ class ImageAnalyzer:
             # Validar que la clase predicha esté en el rango esperado
             if predicted_class not in self.class_names:
                 print(f"⚠️ Clase predicha fuera de rango: {predicted_class}, clases disponibles: {list(self.class_names.keys())}")
-                predicted_class = 0  # Fallback a "Saludable"
+                predicted_class = 0  # Fallback a "Sana"
             
             # Preparar resultado
             disease_name = self.class_names[predicted_class]
@@ -352,9 +352,9 @@ class ImageAnalyzer:
                 print(f"❌ Error al calcular probabilidades: {prob_error}")
                 # Fallback: solo incluir las clases principales
                 all_probabilities = {
-                    "Saludable": 0.0,
-                    "Tizón Temprano": 0.0,
-                    "Tizón Tardío": 0.0
+                    "Sana": 0.0,
+                    "Tizon_tardio": 0.0,
+                    "Otras_enfermedades": 0.0
                 }
             
             result = {
