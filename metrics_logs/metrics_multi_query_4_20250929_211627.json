@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-29T21:16:27.233939",
+  "session_id": "multi_query_4",
+  "total_execution_time_ms": 102.01,
+  "node_metrics": [
+    {
+      "node_name": "proceso_completo",
+      "start_time": 1759198587.132929,
+      "end_time": 1759198587.2339392,
+      "execution_time_ms": 101.01,
+      "success": true,
+      "input_size": 68,
+      "output_size": 65,
+      "memory_usage_mb": null,
+      "error_message": null
+    }
+  ],
+  "rag_metrics": null,
+  "cnn_metrics": null,
+  "conversation_metrics": null,
+  "final_response_length": 25,
+  "context_detected": "general",
+  "success": true,
+  "error_count": 0
+}

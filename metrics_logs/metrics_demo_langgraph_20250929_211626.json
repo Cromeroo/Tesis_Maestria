@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-09-29T21:16:26.820926",
+  "session_id": "demo_langgraph",
+  "total_execution_time_ms": 385.03,
+  "node_metrics": [
+    {
+      "node_name": "detectar_contexto",
+      "start_time": 1759198586.4358985,
+      "end_time": 1759198586.4868975,
+      "execution_time_ms": 51.0,
+      "success": true,
+      "input_size": 60,
+      "output_size": 75,
+      "memory_usage_mb": null,
+      "error_message": null
+    },
+    {
+      "node_name": "configurar_estrategia",
+      "start_time": 1759198586.4868975,
+      "end_time": 1759198586.5188956,
+      "execution_time_ms": 32.0,
+      "success": true,
+      "input_size": 64,
+      "output_size": 57,
+      "memory_usage_mb": null,
+      "error_message": null
+    },
+    {
+      "node_name": "buscar_documentos",
+      "start_time": 1759198586.5188956,
+      "end_time": 1759198586.6398935,
+      "execution_time_ms": 121.0,
+      "success": true,
+      "input_size": 40,
+      "output_size": 265,
+      "memory_usage_mb": null,
+      "error_message": null
+    },
+    {
+      "node_name": "generar_respuesta",
+      "start_time": 1759198586.6398935,
+      "end_time": 1759198586.8209264,
+      "execution_time_ms": 181.03,
+      "success": true,
+      "input_size": 81,
+      "output_size": 457,
+      "memory_usage_mb": null,
+      "error_message": null
+    }
+  ],
+  "rag_metrics": null,
+  "cnn_metrics": null,
+  "conversation_metrics": null,
+  "final_response_length": 457,
+  "context_detected": "campesino",
+  "success": true,
+  "error_count": 0
+}

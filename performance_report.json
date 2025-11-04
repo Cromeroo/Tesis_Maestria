@@ -1,0 +1,42 @@
+{
+  "summary": {
+    "duration_seconds": 132.1472327709198,
+    "samples_collected": 199,
+    "current_status": "warning"
+  },
+  "current_metrics": {
+    "timestamp": 1762040616.3589153,
+    "cpu_percent": 80.1,
+    "ram_total": 32698.07421875,
+    "ram_used": 1463.01171875,
+    "ram_percent": 89.4,
+    "swap_used": 6017.82421875,
+    "swap_percent": 17.8,
+    "disk_io": {
+      "read_bytes": 390.9765157699585,
+      "write_bytes": 1.6223220825195312
+    }
+  },
+  "peak_metrics": {
+    "cpu_percent": 99.8,
+    "ram_mb": 2062.7421875,
+    "gpu_percent": null
+  },
+  "average_metrics": {
+    "avg_cpu_percent": 47.47135678391958,
+    "avg_ram_used": 1000.7816229585427,
+    "avg_ram_percent": 90.3788944723618
+  },
+  "latency_statistics": {},
+  "performance_issues": [
+    {
+      "type": "high_memory",
+      "severity": "critical",
+      "message": "Uso de RAM elevado: 89.4%"
+    }
+  ],
+  "trends": {
+    "cpu_trend": "increasing",
+    "ram_trend": "increasing"
+  }
+}

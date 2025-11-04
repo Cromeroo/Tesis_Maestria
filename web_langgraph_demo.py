@@ -480,12 +480,7 @@ def load_css():
 
 def create_header():
     """Crear header principal"""
-    st.markdown("""
-    <div class="main-header fade-in">
-        <h1>🔗 LangGraph RAG + Contexto Funcional</h1>
-        <p>Demostración de flujo de nodos con detección de contexto que realmente funciona</p>
-    </div>
-    """, unsafe_allow_html=True)
+    pass
 
 def initialize_session_state():
     """Inicializar estado de la sesión"""
@@ -522,14 +517,11 @@ def load_systems():
             try:
                 # Cargar clasificador de imágenes desde HuggingFace
                 st.session_state.classifier = TomatoImageClassifier()
-                st.write("✅ Clasificador de imágenes cargado desde HuggingFace")
                 
                 # Cargar sistema LangGraph
                 st.session_state.langgraph_system = SistemaRAGLangGraph()
-                st.write("✅ Sistema LangGraph cargado")
                 
                 st.session_state.system_ready = True
-                st.success("🎉 Sistemas cargados correctamente")
             except Exception as e:
                 st.error(f"❌ Error cargando sistemas: {e}")
                 st.write("Detalle del error:", str(e))
@@ -1081,7 +1073,7 @@ def render_chat_message(role, content, image=None, classification=None, executio
         if image:
             col1, col2 = st.columns([1, 2])
             with col1:
-                st.image(image, caption="📸 Imagen para análisis", use_container_width=True)
+                st.image(image, caption=" Imagen para análisis", use_container_width=True)
             with col2:
                 st.markdown(f"""
                 <div class="user-message fade-in">
@@ -1152,7 +1144,7 @@ def render_chat_message(role, content, image=None, classification=None, executio
         <div class="assistant-message fade-in">
             <strong>{context_icon} Asistente Agrónomo LangGraph RAG</strong>
             <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">
-                ✨ {context_type} - Basado en 472 documentos especializados
+                ✨ {context_type} - Basado en 472 chunks especializados
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1167,12 +1159,12 @@ def render_chat_message(role, content, image=None, classification=None, executio
 def sidebar_controls():
     """Controles en la sidebar"""
     with st.sidebar:
-        st.markdown("### 🎛️ Controles LangGraph")
+        st.markdown("### 🎛️ Controles")
         
 
         
         # Upload de múltiples imágenes
-        st.markdown("#### 📸 Análisis Multi-Imagen")
+        st.markdown("####  Análisis Multi-Imagen")
         uploaded_files = st.file_uploader(
             "Sube fotos de diferentes partes de tu planta",
             type=['png', 'jpg', 'jpeg'],
@@ -1222,26 +1214,25 @@ def sidebar_controls():
         # 🎯 DESTACAR VALOR DEL RAG
         st.markdown("#### 🎯 Potencia del RAG")
         if st.session_state.system_ready:
-            st.success("✅ LangGraph + CNN Activos")
+            st.success(" LangGraph + CNN Activos")
             st.markdown("""
-            **🧠 Base de Conocimiento:**
-            - 📚 472 documentos especializados
-            - 🔬 Literatura científica 
-            - 👨‍🌾 Guías prácticas de campo
-            - 💊 Tratamientos verificados
+            **Base de Conocimiento:**
+            -  472 documentos especializados
+            -  Literatura científica 
+            -  Guías prácticas de campo
+            -  Tratamientos verificados
             
-            **🎨 Características Únicas:**
-            - 🎯 Contexto adaptativo
-            - 🧠 Memoria conversacional  
-            - 📸 Análisis visual CNN
-            - 💰 Calculadora económica opcional
+            **Características Únicas:**
+            -  Contexto adaptativo
+            -  Memoria conversacional  
+            -  Análisis visual CNN
             """)
         else:
-            st.warning("⏳ Cargando sistemas...")
+            st.warning(" Cargando sistemas...")
         
         # 🧠 Memoria Conversacional
         if st.session_state.conversation_memory['history']:
-            st.markdown("#### 🧠 Memoria Conversacional")
+            st.markdown("####  Memoria Conversacional")
             memory = st.session_state.conversation_memory
             
             # Mostrar perfil del usuario
@@ -1253,16 +1244,16 @@ def sidebar_controls():
             if profile['last_diagnosis']:
                 last_diag = profile['last_diagnosis']
                 st.markdown(f"**Último caso:** {last_diag['disease']}")
-                st.caption(f"📅 {last_diag['timestamp']}")
+                st.caption(f" {last_diag['timestamp']}")
             
             # Mostrar historial reciente (últimas 3 conversaciones)
-            with st.expander("💬 Historial Reciente", expanded=False):
+            with st.expander(" Historial Reciente", expanded=False):
                 recent_history = memory['history'][-3:]
                 for i, conv in enumerate(reversed(recent_history), 1):
                     st.markdown(f"**{i}.** {conv['query'][:50]}...")
                     if conv['classification']:
                         st.caption(f"🔍 {conv['classification']} | {conv['detected_context']}")
-                    st.caption(f"🕒 {conv['timestamp']}")
+                    st.caption(f" {conv['timestamp']}")
                     if i < len(recent_history):
                         st.divider()
             
@@ -1376,11 +1367,11 @@ def main():
         # Contenedor de imagen temporal
         if "temp_image_display" in st.session_state:
             with st.container():
-                st.markdown("### 📸 Resultado del Análisis")
-                col_img, col_result = st.columns([1, 2])
+                st.markdown("###  Resultado del Análisis")
+                col_img, col_result = st.columns([1, 3])
                 with col_img:
                     st.image(st.session_state.temp_image_display["image"], 
-                            caption="Imagen analizada", use_container_width=True)
+                            caption="Imagen analizada", width=150)
                 with col_result:
                     pred = st.session_state.temp_image_display['prediction']
                     conf = st.session_state.temp_image_display['confidence']
@@ -1435,10 +1426,7 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    with col_calc:
-                        # Botón para abrir calculadora económica (OPCIONAL)
-                        if st.button("💰 Calculadora Económica", use_container_width=True, key="open_calc_multi"):
-                            st.session_state.show_economic_calculator = True
+
                     
                     # Mostrar calculadora solo si se solicita explícitamente
                     if st.session_state.get('show_economic_calculator', False):
@@ -1713,11 +1701,8 @@ def main():
         else:
             # Mensaje de bienvenida enfocado en RAG
             st.markdown("""
-            <div class="assistant-message fade-in">
-                <strong>🤖 Asistente Agrónomo Especializado - LangGraph RAG</strong><br><br>
-                ¡Hola! Soy tu asistente especializado en el manejo del tizón tardío en tomate. 
-                Mi conocimiento está basado en <strong>472 documentos científicos y técnicos</strong> 
-                especializados en fitopatología.<br><br>
+            <div style="text-align: center; padding: 1rem 0; margin-bottom: 0.5rem;">
+                <p style="margin: 0; font-size: 1.4rem;"><strong>🤖 Asistente Agrónomo Especializado - Tizí</strong></p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1735,7 +1720,6 @@ def main():
             **🚀 Funciones Avanzadas:**
             - 📸 **Análisis visual**: Sube fotos para diagnóstico CNN
             - 🧠 **Memoria conversacional**: Recuerdo casos anteriores  
-            - 💰 **Calculadora económica**: Análisis costo-beneficio (opcional)
             - 🎯 **Respuestas contextuales**: Adaptadas a tu perfil
             
             ---
@@ -1864,7 +1848,7 @@ ANÁLISIS MULTI-IMAGEN DISPONIBLE:
             if image_context:
                 enhanced_query = f"{user_input.strip()}\n\n{image_context}"
             
-            with st.spinner("🔗 Ejecutando flujo LangGraph..."):
+            with st.spinner(" Ejecutando flujo LangGraph..."):
                 response, execution_data = get_langgraph_response(enhanced_query, classification)
             
             # Agregar respuesta del asistente con contexto
