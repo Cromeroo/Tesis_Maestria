@@ -30,5 +30,22 @@
   "trends": {
     "context_quality_trend": "improving",
     "response_quality_trend": "declining"
+  },
+  "corrected_metrics": {
+    "faithfulness_scores": [
+      0.3333333333333333,
+      1.0,
+      1.0
+    ],
+    "relevancy_scores": [
+      0.5093747973442078,
+      0.6258599201838175,
+      0.424828240275383
+    ],
+    "query_count": 3,
+    "execution_timestamp": "2025-11-04T22:51:03.877898",
+    "note": "Métricas calculadas con: Fidelidad (NLTK+SBERT) y Relevancia (Spacy+Yake)",
+    "avg_faithfulness": 0.7777777777777777,
+    "avg_relevancy": 0.5200209859344694
   }
 }

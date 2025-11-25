@@ -71,7 +71,7 @@ class SistemaRAGLangGraph:
                 raise Exception("No hay colecciones en ChromaDB. Ejecuta primero el procesamiento de documentos.")
             
             self.collection = collections[0]
-            print(f"✅ ChromaDB cargado: {self.collection.name} con {self.collection.count()} documentos")
+            print(f"[OK] ChromaDB cargado: {self.collection.name} con {self.collection.count()} documentos")
             
             # Configurar VertexAI
             import vertexai
@@ -86,10 +86,10 @@ class SistemaRAGLangGraph:
                 top_k=40
             )
             
-            print("✅ VertexAI configurado")
+            print("[OK] VertexAI configurado")
             
         except Exception as e:
-            print(f"❌ Error en setup_system: {e}")
+            print(f"[ERROR] Error en setup_system: {e}")
             # Asegurar que las variables estén en None si hay error
             self.collection = None
             self.llm = None
@@ -162,25 +162,25 @@ class SistemaRAGLangGraph:
                 state["query_rag"] = f"enfermedades tomate diagnóstico manejo {pregunta}"
                 state["n_docs"] = 2
                 state["advertencia_especialidad"] = f"\n**ESPECIALIDAD LIMITADA**: Este sistema está especializado en tizón tardío. Para '{clasificacion_imagen}' la información puede ser limitada. Se recomienda consultar especialista."
-                print("   ⚠️ RAG LIMITADO: Otra enfermedad")
+                print("   [WARNING] RAG LIMITADO: Otra enfermedad")
         else:
             # Sin imagen, RAG general
             state["query_rag"] = pregunta
             state["n_docs"] = 3
             state["advertencia_especialidad"] = ""
-            print("   📚 RAG GENERAL: Sin imagen")
+            print("   [INFO] RAG GENERAL: Sin imagen")
         
         return state
     
     def _buscar_documentos_node(self, state: RAGState) -> RAGState:
         """Nodo 3: Buscar documentos relevantes en ChromaDB"""
-        print("📚 NODO 3: Buscando documentos en ChromaDB...")
+        print("[SEARCH] NODO 3: Buscando documentos en ChromaDB...")
         
         try:
             # Verificar que ChromaDB esté disponible
             if self.collection is None:
                 state["error"] = "Error en búsqueda RAG: ChromaDB no inicializado correctamente"
-                print("   ❌ Error: ChromaDB no inicializado")
+                print("   [ERROR] ChromaDB no inicializado")
                 return state
                 
             query_rag = state["query_rag"]
@@ -194,17 +194,17 @@ class SistemaRAGLangGraph:
             state["documentos_encontrados"] = documents
             state["contexto_rag"] = context
             
-            print(f"   📄 Documentos encontrados: {len(documents)}")
+            print(f"   [INFO] Documentos encontrados: {len(documents)}")
             
         except Exception as e:
             state["error"] = f"Error en búsqueda RAG: {e}"
-            print(f"   ❌ Error: {e}")
+            print(f"   [ERROR] {e}")
         
         return state
     
     def _generar_respuesta_node(self, state: RAGState) -> RAGState:
         """Nodo 4: Generar respuesta final con LLM"""
-        print("🤖 NODO 4: Generando respuesta con LLM...")
+        print("[LLM] NODO 4: Generando respuesta con LLM...")
         
         try:
             if state.get("error"):
@@ -214,9 +214,9 @@ class SistemaRAGLangGraph:
             pregunta = state["pregunta"]
             context = state["contexto_rag"]
             advertencia = state["advertencia_especialidad"]
-            contexto_usuario = state.get("contexto_detectado", "general")  # ✅ AHORA SÍ USAMOS EL CONTEXTO
+            contexto_usuario = state.get("contexto_detectado", "general")  # AHORA SI USAMOS EL CONTEXTO
             
-            # ✅ PROMPT PERSONALIZADO SEGÚN CONTEXTO DETECTADO CON MEMORIA
+            # PROMPT PERSONALIZADO SEGUN CONTEXTO DETECTADO CON MEMORIA
             prompt = self._construir_prompt_contextualizado(contexto_usuario, pregunta, context, state)
             
             # Generar respuesta con LLM
@@ -227,12 +227,12 @@ class SistemaRAGLangGraph:
                 respuesta = advertencia + "\n\n" + respuesta
             
             state["respuesta_final"] = respuesta
-            print(f"   ✅ Respuesta generada con contexto {contexto_usuario}: {len(respuesta)} caracteres")
+            print(f"   [OK] Respuesta generada con contexto {contexto_usuario}: {len(respuesta)} caracteres")
 
         except Exception as e:
             state["error"] = f"Error generando respuesta: {e}"
             state["respuesta_final"] = f"Error: {e}"
-            print(f"   ❌ Error: {e}")
+            print(f"   [ERROR] {e}")
 
         return state
 
@@ -378,7 +378,7 @@ RESPUESTA COMO AGRÓNOMO ESPECIALISTA:"""
     
     def _build_graph(self):
         """Construir el grafo LangGraph"""
-        print("🔧 Construyendo grafo LangGraph...")
+        print("[BUILD] Construyendo grafo LangGraph...")
         
         # Crear el grafo
         workflow = StateGraph(RAGState)
@@ -400,7 +400,7 @@ RESPUESTA COMO AGRÓNOMO ESPECIALISTA:"""
         memory = MemorySaver()
         self.graph = workflow.compile(checkpointer=memory)
         
-        print("✅ Grafo LangGraph compilado")
+        print("[OK] Grafo LangGraph compilado")
     
     def procesar_consulta(self, pregunta: str, clasificacion_imagen: Optional[str] = None) -> Dict[str, Any]:
         """Procesar consulta usando el grafo LangGraph con memoria conversacional"""
@@ -456,15 +456,15 @@ RESPUESTA COMO AGRÓNOMO ESPECIALISTA:"""
             final_state = self.graph.invoke(initial_state, config)
             
             print("=" * 60)
-            print("🎉 FLUJO COMPLETADO")
-            print(f"✅ Contexto detectado: {final_state['contexto_detectado']}")
-            print(f"📚 Documentos encontrados: {len(final_state['documentos_encontrados'])}")
-            print(f"📝 Respuesta: {len(final_state['respuesta_final'])} caracteres")
+            print("[DONE] FLUJO COMPLETADO")
+            print(f"[OK] Contexto detectado: {final_state['contexto_detectado']}")
+            print(f"[INFO] Documentos encontrados: {len(final_state['documentos_encontrados'])}")
+            print(f"[INFO] Respuesta: {len(final_state['respuesta_final'])} caracteres")
             
             return final_state
             
         except Exception as e:
-            print(f"❌ Error en flujo: {e}")
+            print(f"[ERROR] Error en flujo: {e}")
             return {"error": str(e), "respuesta_final": f"Error: {e}"}
     
     def mostrar_estructura_grafo(self):
@@ -508,29 +508,29 @@ RESPUESTA COMO AGRÓNOMO ESPECIALISTA:"""
         └─────────────────┘
         """)
         
-        print("🔄 FLUJO DE DATOS:")
-        print("1. 🔍 DETECTAR CONTEXTO → contexto_detectado")
-        print("2. ⚙️ CONFIGURAR ESTRATEGIA → query_rag, n_docs, advertencia")
-        print("3. 📚 BUSCAR DOCUMENTOS → documentos_encontrados, contexto_rag")
-        print("4. 🤖 GENERAR RESPUESTA → respuesta_final")
+        print("[FLOW] FLUJO DE DATOS:")
+        print("1. [DETECT] DETECTAR CONTEXTO -> contexto_detectado")
+        print("2. [CONFIG] CONFIGURAR ESTRATEGIA -> query_rag, n_docs, advertencia")
+        print("3. [SEARCH] BUSCAR DOCUMENTOS -> documentos_encontrados, contexto_rag")
+        print("4. [LLM] GENERAR RESPUESTA -> respuesta_final")
         
-        print("\n💡 VENTAJAS DE LANGGRAPH:")
-        print("✅ Flujo visual y claro")
-        print("✅ Estado persistente entre nodos")
-        print("✅ Fácil debugging paso a paso")
-        print("✅ Posibilidad de agregar rutas condicionales")
-        print("✅ Checkpoints para recuperación")
+        print("\n[INFO] VENTAJAS DE LANGGRAPH:")
+        print("[OK] Flujo visual y claro")
+        print("[OK] Estado persistente entre nodos")
+        print("[OK] Facil debugging paso a paso")
+        print("[OK] Posibilidad de agregar rutas condicionales")
+        print("[OK] Checkpoints para recuperacion")
 
 def demo_interactivo():
     """Demo interactivo del sistema LangGraph"""
-    print("🍅 DEMO LANGGRAPH - SISTEMA RAG")
+    print("[DEMO] LANGGRAPH - SISTEMA RAG")
     print("=" * 40)
     
     # Inicializar sistema
     sistema = SistemaRAGLangGraph()
     
     if not sistema.collection or not sistema.llm:
-        print("❌ Error: Sistema no pudo inicializarse")
+        print("[ERROR] Sistema no pudo inicializarse")
         return
     
     # Mostrar estructura

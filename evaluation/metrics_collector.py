@@ -73,10 +73,7 @@ class MetricsCollector:
     
     def record_retrieval(self, timing_info: Dict[str, float], 
                         docs_retrieved: int, 
-                        similarity_scores: List[float],
-                        mrr_score: float = 0.0,
-                        ndcg_score: float = 0.0,
-                        context_precision: float = 0.0) -> None:
+                        similarity_scores: List[float]) -> None:
         """Registrar métricas de recuperación"""
         retrieval_time = time.time() - timing_info["retrieval_start"]
         self.total_retrieval_time += retrieval_time
@@ -87,10 +84,7 @@ class MetricsCollector:
             "retrieval_time_ms": retrieval_time * 1000,
             "docs_retrieved": docs_retrieved,
             "avg_similarity": sum(similarity_scores) / len(similarity_scores) if similarity_scores else 0,
-            "max_similarity": max(similarity_scores) if similarity_scores else 0,
-            "mrr_score": mrr_score,
-            "ndcg_score": ndcg_score,
-            "context_precision": context_precision
+            "max_similarity": max(similarity_scores) if similarity_scores else 0
         }
         
         self.current_session["metrics"].append(metric)
@@ -176,12 +170,6 @@ class MetricsCollector:
                 "avg_docs": sum(m["docs_retrieved"] for m in retrieval_metrics) / len(retrieval_metrics)
                 if retrieval_metrics else 0,
                 "avg_similarity": sum(m["avg_similarity"] for m in retrieval_metrics) / len(retrieval_metrics)
-                if retrieval_metrics else 0,
-                "avg_mrr": sum(m.get("mrr_score", 0.0) for m in retrieval_metrics) / len(retrieval_metrics)
-                if retrieval_metrics else 0,
-                "avg_ndcg": sum(m.get("ndcg_score", 0.0) for m in retrieval_metrics) / len(retrieval_metrics)
-                if retrieval_metrics else 0,
-                "avg_context_precision": sum(m.get("context_precision", 0.0) for m in retrieval_metrics) / len(retrieval_metrics)
                 if retrieval_metrics else 0
             },
             "generation_stats": {

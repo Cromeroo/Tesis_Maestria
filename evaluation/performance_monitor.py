@@ -11,17 +11,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import torch
+import GPUtil
 from threading import Thread
 from queue import Queue
 import signal
 import sys
-
-# Intentar importar GPUtil, si no está disponible continuar sin él
-try:
-    import GPUtil
-    HAS_GPUTIL = True
-except ImportError:
-    HAS_GPUTIL = False
 
 class PerformanceMonitor:
     """
@@ -107,7 +101,7 @@ class PerformanceMonitor:
         }
         
         # Agregar métricas GPU si está disponible
-        if self.gpu_available and HAS_GPUTIL:
+        if self.gpu_available:
             try:
                 gpu = GPUtil.getGPUs()[0]  # Primera GPU
                 metrics.update({

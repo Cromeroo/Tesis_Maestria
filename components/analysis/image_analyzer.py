@@ -12,7 +12,7 @@ import numpy as np
 import os
 import json
 from pathlib import Path
-from huggingface_hub import hf_hub_download, login
+# NO importar huggingface_hub aquí - solo si se necesita
 
 class TomatoCNN(nn.Module):
     """Red CNN para clasificación de enfermedades de tomate"""
@@ -62,76 +62,41 @@ class TomatoCNN(nn.Module):
 class ImageAnalyzer:
     """Analizador de imágenes de tomate para detección de enfermedades"""
     
-    def __init__(self, model_path=None, use_huggingface=True):
+    def __init__(self, model_path=None, use_huggingface=False):
         """Inicializar el analizador con el modelo CNN"""
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        if use_huggingface:
-            # Usar modelo desde Hugging Face
-            try:
-                # Cargar token desde credentials.json
-                token = self._load_huggingface_token()
-                if token:
-                    login(token=token)
-                print("✅ Autenticación exitosa con Hugging Face")
-                
-                # Descargar modelo desde Hugging Face
-                model_path = hf_hub_download(
-                    repo_id="DaniloR2011/Tomato_accuracy",
-                    filename="best_model_3class.pth",
-                    cache_dir="./models_cache"
-                )
-                print(f"✅ Modelo descargado desde Hugging Face: {model_path}")
-                
-                # Cargar el modelo original sin modificar la arquitectura
-                checkpoint = torch.load(model_path, map_location=self.device)
-                
-                # Extraer información del checkpoint para determinar la arquitectura correcta
-                if isinstance(checkpoint, dict):
-                    if 'state_dict' in checkpoint:
-                        state_dict = checkpoint['state_dict']
-                    elif 'model_state_dict' in checkpoint:
-                        state_dict = checkpoint['model_state_dict']
-                    else:
-                        state_dict = checkpoint
-                else:
-                    state_dict = checkpoint
-                
-                # Detectar la arquitectura correcta del modelo
-                self.model = self._create_model_from_state_dict(state_dict)
-                self.model.load_state_dict(state_dict)
-                self.model.to(self.device)
-                self.model.eval()
-                
-                print(f"✅ Modelo cargado correctamente desde Hugging Face")
-                
-            except Exception as e:
-                print(f"❌ Error al cargar desde Hugging Face: {e}")
-                print("🔄 Intentando cargar modelo local...")
-                use_huggingface = False
+        # CARGAR SIEMPRE DESDE LOCAL (más rápido)
+        if model_path is None:
+            model_path = Path(__file__).parent.parent.parent / "best_model_3class.pth"
         
-        if not use_huggingface:
-            # Fallback al modelo local
-            if model_path is None:
-                model_path = Path(__file__).parent.parent.parent / "best_model_3class.pth"
-            
+        print(f"Cargando modelo desde: {model_path}")
+        
+        try:
+            # Usar arquitectura estándar TomatoCNN
             self.model = TomatoCNN(num_classes=3)
             
-            try:
-                if os.path.exists(model_path):
-                    checkpoint = torch.load(model_path, map_location=self.device)
-                    if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
-                        self.model.load_state_dict(checkpoint['state_dict'])
-                    else:
-                        self.model.load_state_dict(checkpoint)
-                    self.model.eval()
-                    print(f"✅ Modelo local cargado desde {model_path}")
+            checkpoint = torch.load(model_path, map_location=self.device)
+            
+            # Cargar pesos
+            if isinstance(checkpoint, dict):
+                if 'state_dict' in checkpoint:
+                    self.model.load_state_dict(checkpoint['state_dict'])
+                elif 'model_state_dict' in checkpoint:
+                    self.model.load_state_dict(checkpoint['model_state_dict'])
                 else:
-                    print(f"❌ No se encontró el modelo en {model_path}")
-                    raise FileNotFoundError(f"Modelo no encontrado: {model_path}")
-            except Exception as e:
-                print(f"❌ Error al cargar el modelo local: {e}")
-                raise
+                    self.model.load_state_dict(checkpoint)
+            else:
+                self.model.load_state_dict(checkpoint)
+            
+            self.model.to(self.device)
+            self.model.eval()
+            
+            print(f"[OK] Modelo cargado correctamente")
+            
+        except Exception as e:
+            print(f"[ERROR] Error cargando modelo: {e}")
+            raise
         
         # Definir las transformaciones - Usando 128x128 para obtener 8x8 después de 4 poolings (128/16=8)
         self.transform = transforms.Compose([
@@ -162,20 +127,20 @@ class ImageAnalyzer:
             with open('credentials.json', 'r') as f:
                 credentials = json.load(f)
                 if 'huggingface_token' in credentials:
-                    print("✅ Token de HuggingFace cargado desde credentials.json")
+                    print("[OK] Token de HuggingFace cargado desde credentials.json")
                     return credentials['huggingface_token']
         except FileNotFoundError:
-            print("⚠️ Archivo credentials.json no encontrado")
+            print("[WARNING] Archivo credentials.json no encontrado")
         except KeyError:
-            print("⚠️ Token huggingface_token no encontrado en credentials.json")
+            print("[WARNING] Token huggingface_token no encontrado en credentials.json")
         
         # Fallback a variable de entorno
         token = os.getenv('HUGGINGFACE_TOKEN')
         if token:
-            print("✅ Token de HuggingFace cargado desde variable de entorno")
+            print("[OK] Token de HuggingFace cargado desde variable de entorno")
             return token
         
-        print("❌ No se pudo cargar el token de HuggingFace")
+        print("[ERROR] No se pudo cargar el token de HuggingFace")
         return None
     
     def _create_model_from_state_dict(self, state_dict):
@@ -332,7 +297,7 @@ class ImageAnalyzer:
             
             # Validar que la clase predicha esté en el rango esperado
             if predicted_class not in self.class_names:
-                print(f"⚠️ Clase predicha fuera de rango: {predicted_class}, clases disponibles: {list(self.class_names.keys())}")
+                print(f"[WARNING] Clase predicha fuera de rango: {predicted_class}, clases disponibles: {list(self.class_names.keys())}")
                 predicted_class = 0  # Fallback a "Sana"
             
             # Preparar resultado
@@ -346,10 +311,10 @@ class ImageAnalyzer:
                     if i < probabilities.shape[1]:  # Verificar que el índice esté en rango
                         all_probabilities[class_name] = probabilities[0][i].item()
                     else:
-                        print(f"⚠️ Índice fuera de rango: {i}, dimensiones: {probabilities.shape}")
+                        print(f"[WARNING] Indice fuera de rango: {i}, dimensiones: {probabilities.shape}")
                         all_probabilities[class_name] = 0.0
             except Exception as prob_error:
-                print(f"❌ Error al calcular probabilidades: {prob_error}")
+                print(f"[ERROR] Error al calcular probabilidades: {prob_error}")
                 # Fallback: solo incluir las clases principales
                 all_probabilities = {
                     "Sana": 0.0,
@@ -369,7 +334,7 @@ class ImageAnalyzer:
             return result
             
         except Exception as e:
-            print(f"❌ Error en clasificación: {e}")
+            print(f"[ERROR] Error en clasificacion: {e}")
             return {
                 'predicted_class': 'Error',
                 'confidence': 0.0,
