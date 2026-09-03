@@ -25,7 +25,9 @@ def run(state: dict, *, llm) -> dict:
                          "confidence": round(d["confidence"], 3)}]}
     resp = llm.invoke(prompts.SYNTHESIZE.format(
         label=d["label"], level=d["level"], confidence=d["confidence"],
+        severity=d.get("severity", 0.0), severity_level=d.get("severity_level", "?"),
         question=state.get("user_question", "¿Qué debo hacer?"), context=context))
     return {"final_answer": resp.content if hasattr(resp, "content") else str(resp),
             "history": [{"event": "diagnosis", "label": d["label"],
-                         "confidence": round(d["confidence"], 3)}]}
+                         "confidence": round(d["confidence"], 3),
+                         "severity": d.get("severity", 0.0)}]}

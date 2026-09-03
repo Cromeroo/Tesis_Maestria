@@ -63,17 +63,20 @@ def metrics():
 @app.post("/diagnose", dependencies=[Depends(require_api_key)])
 async def diagnose(file: UploadFile = File(...),
                    question: str = Form("¿Qué debo hacer?"),
-                   thread_id: str | None = Form(default=None)):
+                   thread_id: str | None = Form(default=None),
+                   lot_id: str | None = Form(default=None)):
     suffix = Path(file.filename or "img.jpg").suffix or ".jpg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         path = tmp.name
-    out = get_service().diagnose(path, question, thread_id=thread_id)
+    out = get_service().diagnose(path, question, thread_id=thread_id, lot_id=lot_id)
     d = out["diagnosis"]
     _metrics["diagnoses_total"] += 1
     _metrics["by_label"][d["label"]] += 1
     return {"label": d["label"], "confidence": d["confidence"], "level": d["level"],
             "top3": d.get("probs", []), "thread_id": out["thread_id"],
+            "severity": d.get("severity", 0.0),
+            "severity_level": d.get("severity_level", "indeterminada"),
             "in_scope": out.get("in_scope", True),
             "needs_input": out.get("needs_input", False),
             "clarification": out.get("clarification", ""),
@@ -85,3 +88,11 @@ async def diagnose(file: UploadFile = File(...),
 def thread_history(thread_id: str):
     return {"thread_id": thread_id,
             "history": get_service().thread_history(thread_id)}
+
+
+@app.get("/lots/{lot_id}")
+def lot_timeline(lot_id: str, limit: int = 50):
+    from src.services.lots import LotStore
+    store = LotStore()
+    return {"lot_id": lot_id, "summary": store.summary(lot_id),
+            "timeline": store.timeline(lot_id, limit=limit)}

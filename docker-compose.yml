@@ -1,16 +1,35 @@
 services:
-  api:
+  vision:
+    build:
+      context: .
+      dockerfile: Dockerfile.vision
+    ports: ["8001:8001"]
+    env_file: .env
+    volumes:
+      # Descomenta con pesos reales para visión de verdad en el contenedor:
+      # - ./best_model_3class.pth:/app/best_model_3class.pth:ro
+
+  rag:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    ports: ["8002:8002"]
+    env_file: .env
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./Documentos:/app/Documentos:ro
+
+  api: # orquestador LangGraph: consume vision+rag por HTTP
     build: .
     ports: ["8000:8000"]
     env_file: .env
     environment:
       DEVICE: cpu # en contenedor siempre CPU (ver Dockerfile* para el porqué)
+      VISION_URL: http://vision:8001
+      RAG_URL: http://rag:8002
     volumes:
-      - ./chroma_db:/app/chroma_db
-      - ./Documentos:/app/Documentos:ro
-      # Descomenta si ya tienes los pesos y quieres visión real en el contenedor:
-      # - ./best_model_3class.pth:/app/best_model_3class.pth:ro
-      # - ./credentials.json:/app/credentials.json:ro
+      - ./checkpoints.db:/app/checkpoints.db
+    depends_on: [vision, rag]
 
   ui:
     build: .
@@ -18,9 +37,7 @@ services:
     ports: ["8501:8501"]
     env_file: .env
     environment:
-      DEVICE: cpu
-    volumes:
-      - ./chroma_db:/app/chroma_db
+      AGENT_URL: http://api:8000
     depends_on: [api]
 
   # One-shot: docker compose --profile ingest run --rm ingest

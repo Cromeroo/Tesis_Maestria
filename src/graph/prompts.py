@@ -7,6 +7,7 @@ Una por línea, sin numerar. En español."""
 SYNTHESIZE = """Eres un experto en fitopatología del tomate. Responde en español, claro y profesional.
 
 DIAGNÓSTICO VISUAL: {label} (confianza {level}, {confidence:.0%})
+SEVERIDAD FOLIAR ESTIMADA: {severity:.1%} ({severity_level})
 PREGUNTA DEL USUARIO: {question}
 
 CONTEXTO RECUPERADO:

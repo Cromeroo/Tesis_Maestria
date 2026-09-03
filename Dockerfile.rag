@@ -1,0 +1,11 @@
+# rag-svc: ChromaDB + embeddings (CPU). Pesa ~1GB por sentence-transformers.
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TESIS_OFFLINE=1
+WORKDIR /app
+COPY requirements.txt requirements.docker.txt ./
+RUN pip install --no-cache-dir -r requirements.docker.txt
+COPY src/ ./src/
+# Pre-descarga el modelo de embeddings para que el primer /search no cuelgue
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
+EXPOSE 8002
+CMD ["uvicorn", "src.rag_svc.app:app", "--host", "0.0.0.0", "--port", "8002"]

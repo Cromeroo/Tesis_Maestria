@@ -4,7 +4,8 @@ __pycache__/
 .venv/
 .env
 chroma_db/
-checkpoints.db
+checkpoints.db*
+lots.db*
 *.pth
 *.pt
 textos_procesados/

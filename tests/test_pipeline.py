@@ -78,6 +78,26 @@ def test_request_info_human_in_the_loop():
     assert "luz natural" in out["clarification"]
 
 
+def test_severity_healthy_vs_lesion():
+    from src.models.severity import estimate_severity
+    healthy = Image.new("RGB", (100, 100), (34, 139, 34))
+    assert estimate_severity(healthy)["fraction"] < 0.01
+    sick = Image.new("RGB", (100, 100), (34, 139, 34))
+    px = sick.load()
+    for x in range(30, 70):
+        for y in range(30, 70):
+            px[x, y] = (101, 67, 33)  # marrón lesión
+    out = estimate_severity(sick)
+    assert out["fraction"] > 0.10 and out["level"] in {"moderada", "severa"}
+    assert out["overlay"].size == (100, 100)
+
+
+def test_analyze_includes_severity():
+    clf = LeafClassifier(weights_path="./no_existe.pth", device="cpu")
+    out = clf.analyze(Image.new("RGB", (200, 200), (34, 139, 34)))
+    assert "severity" in out and "severity_level" in out and len(out["probs"]) == 3
+
+
 def test_out_of_scope_abstains_without_rag(tmp_path):
     img_path = tmp_path / "hoja.jpg"
     Image.new("RGB", (200, 200), "green").save(img_path)

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     CHECKPOINT_PATH: str = "./checkpoints.db"  # memoria conversacional (sqlite)
     API_KEY: str = ""  # si se define, /diagnose exige header X-API-Key
     RATE_LIMIT_PER_MIN: int = 30  # 0 = sin límite
+    VISION_URL: str = ""  # ej. http://vision:8001 (vacío = in-process)
+    RAG_URL: str = ""  # ej. http://rag:8002 (vacío = in-process)
 
 
 @lru_cache

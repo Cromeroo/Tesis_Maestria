@@ -33,8 +33,34 @@ CSS = """
 
 
 # ---------- servicio ----------
+class AgentHttpClient:
+    """Habla con el orquestador por HTTP (modo compose: AGENT_URL=http://api:8000)."""
+
+    def __init__(self, base_url: str):
+        import httpx
+        self.client = httpx.Client(base_url=base_url.rstrip("/"), timeout=120.0)
+
+    def health(self) -> dict:
+        return self.client.get("/health").json()
+
+    def diagnose(self, image_path: str, question: str = "¿Qué debo hacer?",
+                 thread_id: str | None = None, lot_id: str | None = None) -> dict:
+        with open(image_path, "rb") as f:
+            data = {"question": question or "¿Qué debo hacer?",
+                    "thread_id": thread_id or "", "lot_id": lot_id or ""}
+            r = self.client.post("/diagnose", files={"file": ("img.jpg", f)}, data=data)
+        r.raise_for_status()
+        return r.json()
+
+    def lot(self, lot_id: str) -> dict:
+        return self.client.get(f"/lots/{lot_id}").json()
+
+
 @st.cache_resource(show_spinner="Cargando modelo y grafo...")
 def get_service():
+    import os
+    if os.getenv("AGENT_URL"):
+        return AgentHttpClient(os.environ["AGENT_URL"])
     from src.services.diagnosis import DiagnosisService
     return DiagnosisService()
 
@@ -67,6 +93,7 @@ def build_report(filename: str, question: str, out: dict) -> str:
     lines = [f"# Diagnóstico — {filename}", "",
              f"- Fecha: {datetime.now():%Y-%m-%d %H:%M}",
              f"- Clase: **{d['label']}** ({d['confidence']:.1%}, confianza {d['level']})",
+             f"- Severidad foliar: {(d.get('severity') or 0):.1%} ({d.get('severity_level', '?')})",
              f"- Pregunta: {question}", ""]
     for p in d.get("probs", []):
         lines.append(f"- {p['label']}: {p['confidence']:.1%}")
@@ -116,7 +143,8 @@ def diagnose_and_store(service, image: Image.Image, filename: str, question: str
     try:
         with st.spinner("Agente en curso: visión → triage → RAG → síntesis..."):
             out = service.diagnose(path, question or "¿Qué debo hacer?",
-                                   thread_id=st.session_state.thread_id)
+                                   thread_id=st.session_state.thread_id,
+                                   lot_id=st.session_state.get("lot_id") or None)
     except Exception as e:
         st.error(f"Falló el diagnóstico: {e}")
         with st.expander("Detalle técnico"):
@@ -157,6 +185,9 @@ def main() -> None:
         st.stop()
     health_sidebar(health)
     st.sidebar.caption(f"Hilo: `{st.session_state.thread_id}` (memoria del caso)")
+    st.session_state.lot_id = st.sidebar.text_input(
+        "🌱 Lote (seguimiento)", value=st.session_state.get("lot_id", "lote-1"),
+        help="Cada diagnóstico se registra en el timeline de este lote.")
     if st.sidebar.button("🆕 Nuevo caso (hilo nuevo)"):
         st.session_state.thread_id = uuid.uuid4().hex[:12]
         st.rerun()
@@ -165,7 +196,8 @@ def main() -> None:
         st.session_state.last_result = None
         st.rerun()
 
-    tab_diag, tab_hist = st.tabs(["🔍 Diagnóstico", f"🕘 Historial ({len(st.session_state.history)})"])
+    tab_diag, tab_hist, tab_lote = st.tabs(
+        ["🔍 Diagnóstico", f"🕘 Historial ({len(st.session_state.history)})", "🌱 Lote"])
 
     with tab_diag:
         col_in, col_out = st.columns([1, 1.2])
@@ -198,6 +230,35 @@ def main() -> None:
                 filename, question, out = st.session_state.last_result
                 thumb = st.session_state.history[0]["image"] if st.session_state.history else None
                 show_result(thumb or image, filename, question, out)
+
+    with tab_lote:
+        lot_id = st.session_state.get("lot_id", "lote-1")
+        st.header(f"🌱 Lote `{lot_id}` — progresión")
+        try:
+            data = service.lot(lot_id)
+        except Exception as e:
+            st.error(f"No se pudo leer el lote: {e}")
+            data = {"summary": {"records": 0}, "timeline": []}
+        s = data.get("summary", {})
+        if not s.get("records"):
+            st.info("Sin registros: diagnostica con este lote activo para empezar el timeline.")
+        else:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Registros", s["records"])
+            m2.metric("Última severidad", f"{(s.get('last_severity') or 0):.1%}")
+            trend = s.get("trend", 0) or 0
+            m3.metric("Tendencia", f"{trend:+.1%}",
+                      delta="mejorando" if s.get("improving") else "empeorando")
+            st.caption(f"Por clase: {s.get('by_label', {})}")
+            for r in data.get("timeline", [])[:20]:
+                sev = r.get("severity") or 0
+                mark = "❓" if r.get("needs_input") else "📷"
+                st.markdown(
+                    f"{mark} **{r.get('label')}** ({(r.get('confidence') or 0):.0%}) · "
+                    f"sev {sev:.1%} "
+                    f"<div class='prob-track'><div class='prob-fill' style='width:"
+                    f"{max(sev * 100, 2):.1f}%; background:#f59e0b;'>{sev:.0%}</div></div>",
+                    unsafe_allow_html=True)
 
     with tab_hist:
         if not st.session_state.history:

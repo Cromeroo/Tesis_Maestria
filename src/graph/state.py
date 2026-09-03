@@ -14,6 +14,8 @@ class Diagnosis(TypedDict):
     confidence: float
     level: str  # baja | moderada | alta
     probs: List[dict]  # [{"label":..., "confidence":...}] ordenado desc
+    severity: float  # 0..1 fracción foliar afectada (diferencial)
+    severity_level: str  # leve | moderada | severa | indeterminada
 
 
 class RAGContext(TypedDict):

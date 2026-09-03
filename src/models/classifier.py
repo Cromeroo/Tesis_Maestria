@@ -8,6 +8,7 @@ from torchvision import transforms as T
 from PIL import Image
 
 from src.models.cnn import build_model
+from src.models.severity import estimate_severity
 from src.utils.device import get_device
 
 LABELS = ["Sana", "Tizon_tardio", "Otras_enfermedades"]
@@ -41,6 +42,17 @@ class LeafClassifier:
     def predict(self, image: Image.Image) -> tuple[str, float]:
         probs = self.predict_proba(image)
         return probs[0]
+
+    def analyze(self, image: Image.Image) -> dict:
+        """Diagnóstico visual completo: clase + distribución + severidad foliar."""
+        img = image.convert("RGB")
+        ranked = self.predict_proba(img)
+        label, confidence = ranked[0]
+        sev = estimate_severity(img)
+        return {"label": label, "confidence": confidence,
+                "level": self.confidence_level(confidence),
+                "probs": [{"label": l, "confidence": c} for l, c in ranked],
+                "severity": sev["fraction"], "severity_level": sev["level"]}
 
     def predict_proba(self, image: Image.Image) -> list[tuple[str, float]]:
         """Distribución completa ordenada desc. La UI la usa para las barras por clase."""
