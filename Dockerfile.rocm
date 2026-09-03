@@ -1,0 +1,21 @@
+# Imagen ROCm: SOLO para hosts Linux con GPU AMD (tu 9060 XT en nativo Windows NO aplica).
+# En Linux: docker run --device=/dev/kfd --device=/dev/dri --group-add video ...
+# Fija el tag a tu versión de ROCm/pytorch antes de publicar la tesis.
+FROM rocm/pytorch:latest
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEVICE=cuda \
+    TESIS_OFFLINE=0
+
+WORKDIR /app
+COPY requirements.txt ./
+# torch/torchvision ya vienen en la base ROCm: no reinstalarlos
+RUN grep -v -E "^torch" requirements.txt > /tmp/req.txt \
+ && pip install --no-cache-dir -r /tmp/req.txt
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY configs/ ./configs/
+
+EXPOSE 8000 8501
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

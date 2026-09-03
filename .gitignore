@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+chroma_db/
+checkpoints.db
+*.pth
+*.pt
+textos_procesados/
+textos_traducidos/
+credentials.json

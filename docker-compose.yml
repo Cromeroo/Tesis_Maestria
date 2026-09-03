@@ -1,0 +1,34 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    env_file: .env
+    environment:
+      DEVICE: cpu # en contenedor siempre CPU (ver Dockerfile* para el porqué)
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./Documentos:/app/Documentos:ro
+      # Descomenta si ya tienes los pesos y quieres visión real en el contenedor:
+      # - ./best_model_3class.pth:/app/best_model_3class.pth:ro
+      # - ./credentials.json:/app/credentials.json:ro
+
+  ui:
+    build: .
+    command: streamlit run src/ui/app.py --server.port 8501 --server.address 0.0.0.0
+    ports: ["8501:8501"]
+    env_file: .env
+    environment:
+      DEVICE: cpu
+    volumes:
+      - ./chroma_db:/app/chroma_db
+    depends_on: [api]
+
+  # One-shot: docker compose --profile ingest run --rm ingest
+  ingest:
+    build: .
+    profiles: [ingest]
+    command: python scripts/ingest_docs.py --docs ./Documentos
+    env_file: .env
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./Documentos:/app/Documentos:ro

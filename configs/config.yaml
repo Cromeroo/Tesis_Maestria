@@ -1,0 +1,22 @@
+vision:
+  image_size: 128
+  weights_path: ./best_model_3class.pth
+  backbone: simple_cnn  # simple_cnn | efficientnet_b0
+  labels: ["Sana", "Tizon_tardio", "Otras_enfermedades"]
+  device: auto  # auto | cuda | cpu
+
+rag:
+  chunk_size: 1000
+  chunk_overlap: 200
+  collection: tizon_tardio
+  chroma_path: ./chroma_db
+  embedding_model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  top_k: 5
+
+agent:
+  llm_model: gemini-2.5-flash
+  location: us-central1
+  temperature_answer: 0.7
+  confidence_low: 0.60
+  confidence_high: 0.90
+  max_queries_per_diagnosis: 2
