@@ -8,9 +8,10 @@ import time
 
 
 class LotStore:
-    def __init__(self, path: str = "./lots.db"):
-        self.path = path
-        con = sqlite3.connect(path)
+    def __init__(self, path: str | None = None):
+        import os
+        self.path = path or os.getenv("LOT_DB_PATH") or "./lots.db"
+        con = sqlite3.connect(self.path)
         con.execute("""CREATE TABLE IF NOT EXISTS lot_records(
             id INTEGER PRIMARY KEY AUTOINCREMENT, lot_id TEXT NOT NULL,
             ts REAL NOT NULL, label TEXT, confidence REAL,

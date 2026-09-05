@@ -69,7 +69,20 @@ async def diagnose(file: UploadFile = File(...),
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         path = tmp.name
-    out = get_service().diagnose(path, question, thread_id=thread_id, lot_id=lot_id)
+    try:
+        out = get_service().diagnose(path, question, thread_id=thread_id, lot_id=lot_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import httpx as _httpx
+        code = 502 if isinstance(e, _httpx.HTTPError) else 500
+        raise HTTPException(status_code=code, detail=f"diagnóstico falló: {e}")
+    finally:
+        import os as _os
+        try:
+            _os.unlink(path)  # la v1 y la primera v2 dejaban basura en /tmp
+        except OSError:
+            pass
     d = out["diagnosis"]
     _metrics["diagnoses_total"] += 1
     _metrics["by_label"][d["label"]] += 1

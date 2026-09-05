@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     MAX_QUERIES: int = 2
     DEVICE: str = "auto"  # auto | cuda | cpu (cuda = ROCm en tu 9060 XT)
     CHECKPOINT_PATH: str = "./checkpoints.db"  # memoria conversacional (sqlite)
+    LOT_DB_PATH: str = "./lots.db"  # timeline por lote (en compose: /app/data/...)
     API_KEY: str = ""  # si se define, /diagnose exige header X-API-Key
     RATE_LIMIT_PER_MIN: int = 30  # 0 = sin límite
     VISION_URL: str = ""  # ej. http://vision:8001 (vacío = in-process)

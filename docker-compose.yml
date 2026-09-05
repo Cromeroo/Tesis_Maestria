@@ -5,9 +5,7 @@ services:
       dockerfile: Dockerfile.vision
     ports: ["8001:8001"]
     env_file: .env
-    volumes:
-      # Descomenta con pesos reales para visión de verdad en el contenedor:
-      # - ./best_model_3class.pth:/app/best_model_3class.pth:ro
+    # Con pesos reales, monta: ./best_model_3class.pth:/app/best_model_3class.pth:ro
 
   rag:
     build:
@@ -27,8 +25,10 @@ services:
       DEVICE: cpu # en contenedor siempre CPU (ver Dockerfile* para el porqué)
       VISION_URL: http://vision:8001
       RAG_URL: http://rag:8002
+      CHECKPOINT_PATH: /app/data/checkpoints.db
+      LOT_DB_PATH: /app/data/lots.db
     volumes:
-      - ./checkpoints.db:/app/checkpoints.db
+      - agent-data:/app/data
     depends_on: [vision, rag]
 
   ui:
@@ -49,3 +49,6 @@ services:
     volumes:
       - ./chroma_db:/app/chroma_db
       - ./Documentos:/app/Documentos:ro
+
+volumes:
+  agent-data: # memoria (checkpoints) + lotes: sobrevive a `down`
